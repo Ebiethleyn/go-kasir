@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Produk — Go Kasir</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <div class="main">
+    <div class="topbar">
+      <div class="d-flex align-items-center gap-2">
+        <button class="menu-toggle" id="btnMenu"><i class="bi bi-list"></i></button>
+        <h5 class="mb-0" id="pageTitle">Manajemen Produk</h5>
+      </div>
+      <span class="text-muted small" id="topOwner"></span>
+    </div>
+    <div class="content">
+      <ul class="nav nav-tabs mb-3">
+        <li class="nav-item"><button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tabProd">Produk</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabCat">Kategori</button></li>
+        <li class="nav-item"><button class="nav-link" data-bs-toggle="tab" data-bs-target="#tabStock">Histori Stok</button></li>
+      </ul>
+      <div class="tab-content">
+        <div class="tab-pane fade show active" id="tabProd">
+          <div class="panel">
+            <div class="d-flex flex-wrap gap-2 mb-3">
+              <input type="text" id="prodSearch" class="form-control" style="max-width:220px" placeholder="Cari produk...">
+              <select id="prodCat" class="form-select" style="max-width:180px"><option value="">Semua kategori</option></select>
+              <div class="form-check align-self-center">
+                <input class="form-check-input" type="checkbox" id="lowOnly">
+                <label class="form-check-label" for="lowOnly">Stok menipis</label>
+              </div>
+              <button class="btn btn-accent ms-auto" id="btnAddProd"><i class="bi bi-plus"></i> Tambah</button>
+              <label class="btn btn-outline-secondary mb-0">
+                <i class="bi bi-upload"></i> Import Excel
+                <input type="file" id="importFile" accept=".xlsx,.xls" hidden>
+              </label>
+            </div>
+            <div class="table-responsive">
+              <table class="table table-sm table-hover">
+                <thead><tr><th>SKU</th><th>Nama</th><th>Kategori</th><th>Beli</th><th>Jual</th><th>Stok</th><th></th></tr></thead>
+                <tbody id="prodBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="tabCat">
+          <div class="panel">
+            <div class="row g-2 mb-3">
+              <div class="col-md-4"><input id="catName" class="form-control" placeholder="Nama kategori"></div>
+              <div class="col-md-5"><input id="catDesc" class="form-control" placeholder="Deskripsi"></div>
+              <div class="col-md-3"><button class="btn btn-accent w-100" id="btnAddCat">Tambah Kategori</button></div>
+            </div>
+            <table class="table table-sm"><thead><tr><th>Nama</th><th>Deskripsi</th><th></th></tr></thead><tbody id="catBody"></tbody></table>
+          </div>
+        </div>
+        <div class="tab-pane fade" id="tabStock">
+          <div class="panel">
+            <div class="row g-2 mb-3">
+              <div class="col-auto"><input type="date" id="stockFrom" class="form-control"></div>
+              <div class="col-auto"><input type="date" id="stockTo" class="form-control"></div>
+              <div class="col-auto"><button class="btn btn-outline-secondary" id="btnLoadStock">Muat</button></div>
+            </div>
+            <table class="table table-sm"><thead><tr><th>Waktu</th><th>Produk</th><th>Tipe</th><th>Qty</th><th>Sebelum</th><th>Sesudah</th><th>Catatan</th></tr></thead><tbody id="stockBody"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal fade" id="prodModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title" id="prodModalTitle">Produk</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="pId">
+      <div class="row g-2">
+        <div class="col-6"><label class="form-label">SKU</label><input id="pSku" class="form-control"></div>
+        <div class="col-6"><label class="form-label">Barcode</label><input id="pBarcode" class="form-control"></div>
+        <div class="col-12"><label class="form-label">Nama</label><input id="pName" class="form-control"></div>
+        <div class="col-12"><label class="form-label">Kategori</label><select id="pCat" class="form-select"></select></div>
+        <div class="col-6"><label class="form-label">Harga Beli</label><input type="number" id="pBuy" class="form-control"></div>
+        <div class="col-6"><label class="form-label">Harga Jual</label><input type="number" id="pSell" class="form-control"></div>
+        <div class="col-4"><label class="form-label">Stok awal</label><input type="number" id="pStock" class="form-control" value="0"></div>
+        <div class="col-4"><label class="form-label">Min Stok</label><input type="number" id="pMin" class="form-control" value="5"></div>
+        <div class="col-4"><label class="form-label">Satuan</label><input id="pUnit" class="form-control" value="pcs"></div>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-accent" id="btnSaveProd">Simpan</button></div>
+  </div></div>
+</div>
+
+<div class="modal fade" id="stockModal" tabindex="-1">
+  <div class="modal-dialog"><div class="modal-content">
+    <div class="modal-header"><h5 class="modal-title">Sesuaikan Stok</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+    <div class="modal-body">
+      <input type="hidden" id="sPid">
+      <p id="sPname" class="fw-semibold"></p>
+      <div class="mb-2"><label class="form-label">Tipe</label>
+        <select id="sType" class="form-select"><option value="in">Masuk (restock)</option><option value="out">Keluar</option><option value="adjust">Opname (set absolut)</option></select>
+      </div>
+      <div class="mb-2"><label class="form-label">Jumlah</label><input type="number" id="sQty" class="form-control" min="1" value="1"></div>
+      <div class="mb-2"><label class="form-label">Catatan</label><input id="sNotes" class="form-control"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-accent" id="btnSaveStock">Simpan</button></div>
+  </div></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+initShell('products', 'Manajemen Produk');
+const prodModal = new bootstrap.Modal('#prodModal');
+const stockModal = new bootstrap.Modal('#stockModal');
+let categories = [];
+
+async function loadCats() {
+  const { data } = await api('/categories');
+  categories = data || [];
+  const opts = categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  qs('#prodCat').innerHTML = '<option value="">Semua kategori</option>' + opts;
+  qs('#pCat').innerHTML = '<option value="">—</option>' + opts;
+  qs('#catBody').innerHTML = categories.map(c => `
+    <tr><td>${c.name}</td><td>${c.description||''}</td>
+    <td><button class="btn btn-sm btn-outline-danger" data-delcat="${c.id}"><i class="bi bi-trash"></i></button></td></tr>`).join('');
+}
+
+async function loadProducts() {
+  const params = new URLSearchParams({
+    search: qs('#prodSearch').value, limit: 100,
+    low_stock: qs('#lowOnly').checked ? '1' : '0'
+  });
+  if (qs('#prodCat').value) params.set('category_id', qs('#prodCat').value);
+  const { data } = await api('/products?' + params);
+  qs('#prodBody').innerHTML = (data.items || []).map(p => `
+    <tr class="${p.stock <= p.min_stock ? 'table-warning' : ''}">
+      <td>${p.sku}</td><td>${p.name}</td>
+      <td>${p.category ? p.category.name : '—'}</td>
+      <td>${formatRp(p.buy_price)}</td><td>${formatRp(p.sell_price)}</td>
+      <td>${p.stock} ${p.unit}</td>
+      <td class="text-nowrap">
+        <button class="btn btn-sm btn-outline-secondary" data-stock="${p.id}" data-name="${p.name}" title="Stok"><i class="bi bi-arrow-left-right"></i></button>
+        <button class="btn btn-sm btn-outline-primary" data-edit='${JSON.stringify(p).replace(/'/g,"&#39;")}'><i class="bi bi-pencil"></i></button>
+        <button class="btn btn-sm btn-outline-danger" data-del="${p.id}"><i class="bi bi-trash"></i></button>
+      </td>
+    </tr>`).join('');
+}
+
+qs('#btnAddProd').onclick = () => {
+  qs('#prodModalTitle').textContent = 'Tambah Produk';
+  qs('#pId').value = '';
+  ['pSku','pBarcode','pName'].forEach(id => qs('#'+id).value = '');
+  qs('#pBuy').value = 0; qs('#pSell').value = 0; qs('#pStock').value = 0; qs('#pMin').value = 5; qs('#pUnit').value = 'pcs';
+  qs('#pCat').value = '';
+  prodModal.show();
+};
+
+qs('#btnSaveProd').onclick = async () => {
+  const payload = {
+    sku: qs('#pSku').value.trim(), barcode: qs('#pBarcode').value.trim(), name: qs('#pName').value.trim(),
+    category_id: qs('#pCat').value ? Number(qs('#pCat').value) : null,
+    buy_price: Number(qs('#pBuy').value)||0, sell_price: Number(qs('#pSell').value)||0,
+    stock: Number(qs('#pStock').value)||0, min_stock: Number(qs('#pMin').value)||5, unit: qs('#pUnit').value || 'pcs',
+    is_active: true
+  };
+  try {
+    const id = qs('#pId').value;
+    if (id) await api('/products/' + id, { method: 'PUT', body: JSON.stringify(payload) });
+    else await api('/products', { method: 'POST', body: JSON.stringify(payload) });
+    prodModal.hide(); toast('Produk disimpan'); loadProducts();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+qs('#prodBody').addEventListener('click', async (e) => {
+  const del = e.target.closest('[data-del]');
+  const edit = e.target.closest('[data-edit]');
+  const st = e.target.closest('[data-stock]');
+  if (del && confirm('Hapus produk?')) {
+    try { await api('/products/' + del.dataset.del, { method: 'DELETE' }); toast('Dihapus'); loadProducts(); }
+    catch (ex) { toast(ex.message, 'error'); }
+  }
+  if (edit) {
+    const p = JSON.parse(edit.dataset.edit.replace(/&#39;/g, "'"));
+    qs('#prodModalTitle').textContent = 'Edit Produk';
+    qs('#pId').value = p.id; qs('#pSku').value = p.sku; qs('#pBarcode').value = p.barcode||'';
+    qs('#pName').value = p.name; qs('#pCat').value = p.category_id || '';
+    qs('#pBuy').value = p.buy_price; qs('#pSell').value = p.sell_price;
+    qs('#pStock').value = p.stock; qs('#pMin').value = p.min_stock; qs('#pUnit').value = p.unit;
+    prodModal.show();
+  }
+  if (st) {
+    qs('#sPid').value = st.dataset.stock; qs('#sPname').textContent = st.dataset.name;
+    qs('#sQty').value = 1; qs('#sNotes').value = ''; qs('#sType').value = 'in';
+    stockModal.show();
+  }
+});
+
+qs('#btnSaveStock').onclick = async () => {
+  try {
+    await api('/products/' + qs('#sPid').value + '/stock', {
+      method: 'POST',
+      body: JSON.stringify({ type: qs('#sType').value, quantity: Number(qs('#sQty').value), notes: qs('#sNotes').value })
+    });
+    stockModal.hide(); toast('Stok diperbarui'); loadProducts();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+qs('#btnAddCat').onclick = async () => {
+  try {
+    await api('/categories', { method: 'POST', body: JSON.stringify({ name: qs('#catName').value, description: qs('#catDesc').value }) });
+    qs('#catName').value = ''; qs('#catDesc').value = '';
+    toast('Kategori ditambah'); loadCats();
+  } catch (e) { toast(e.message, 'error'); }
+};
+
+qs('#catBody').addEventListener('click', async (e) => {
+  const btn = e.target.closest('[data-delcat]');
+  if (btn && confirm('Hapus kategori?')) {
+    try { await api('/categories/' + btn.dataset.delcat, { method: 'DELETE' }); loadCats(); }
+    catch (ex) { toast(ex.message, 'error'); }
+  }
+});
+
+qs('#importFile').onchange = async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    const res = await api('/products/import', { method: 'POST', body: fd, headers: {} });
+    toast(`Import: ${res.data.imported} berhasil`);
+    if (res.data.errors?.length) console.warn(res.data.errors);
+    loadProducts();
+  } catch (ex) { toast(ex.message, 'error'); }
+  e.target.value = '';
+};
+
+async function loadStock() {
+  const params = new URLSearchParams({ from: qs('#stockFrom').value, to: qs('#stockTo').value, limit: 100 });
+  const { data } = await api('/stock-movements?' + params);
+  qs('#stockBody').innerHTML = (data.items || []).map(m => `
+    <tr><td>${new Date(m.created_at).toLocaleString('id-ID')}</td>
+    <td>${m.product ? m.product.name : m.product_id}</td>
+    <td>${m.type}</td><td>${m.quantity}</td><td>${m.stock_before}</td><td>${m.stock_after}</td><td>${m.notes||''}</td></tr>`).join('');
+}
+
+qs('#btnLoadStock').onclick = () => loadStock().catch(e => toast(e.message, 'error'));
+['prodSearch','prodCat','lowOnly'].forEach(id => qs('#'+id).addEventListener('change', loadProducts));
+qs('#prodSearch').addEventListener('keyup', (e) => { if (e.key === 'Enter') loadProducts(); });
+
+qs('#stockFrom').value = daysAgoStr(30); qs('#stockTo').value = todayStr();
+Promise.all([loadCats(), loadProducts()]).catch(e => toast(e.message, 'error'));
+</script>
+</body>
+</html>

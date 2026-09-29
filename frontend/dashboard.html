@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard — Go Kasir</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/app.css" rel="stylesheet">
+</head>
+
+<body>
+  <div class="app-shell" id="appShell">
+    <div class="main">
+      <div class="topbar">
+        <div class="d-flex align-items-center gap-2">
+          <button class="menu-toggle" id="btnMenu"><i class="bi bi-list"></i></button>
+          <h5 class="mb-0" id="pageTitle">Dashboard</h5>
+        </div>
+        <span class="text-muted small" id="topOwner"></span>
+      </div>
+      <div class="content">
+        <div class="row row-cols-2 row-cols-md-3 row-cols-xl-5 g-3 mb-3">
+          <div class="col">
+            <div class="stat-card">
+              <div class="label">Penjualan Hari Ini</div>
+              <div class="value" id="statSales">—</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="stat-card">
+              <div class="label">Total Keuntungan</div>
+              <div class="value" id="statProfit">—</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="stat-card">
+              <div class="label">Jumlah Transaksi</div>
+              <div class="value" id="statTrx">—</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="stat-card">
+              <div class="label">Produk Terlaris</div>
+              <div class="value fs-5" id="statTop">—</div>
+            </div>
+          </div>
+          <div class="col">
+            <div class="stat-card">
+              <div class="label">Stok Menipis</div>
+              <div class="value text-warning" id="statLow">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="panel mb-3">
+          <h6 class="mb-3">Ringkasan Periode Berjalan</h6>
+          <div class="table-responsive">
+            <table class="table table-sm table-hover align-middle mb-0">
+              <thead>
+                <tr>
+                  <th>Periode</th>
+                  <th>Transaksi</th>
+                  <th>Keuntungan (Jual - Beli)</th>
+                  <th>Produk terlaris</th>
+                  <th>Qty</th>
+                  <th>Produk paling sering dibeli</th>
+                  <th>Transaksi produk</th>
+                  <th>Omzet produk terbesar</th>
+                  <th>Omzet</th>
+                  <th>Harga satuan tertinggi</th>
+                  <th>Harga</th>
+                </tr>
+              </thead>
+              <tbody id="periodBody"></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="row g-3">
+          <div class="col-lg-7">
+            <div class="panel">
+              <h6 class="mb-3">Penjualan 7 Hari Terakhir</h6>
+              <div class="chart-box"><canvas id="chartBar"></canvas></div>
+            </div>
+          </div>
+          <div class="col-lg-5">
+            <div class="panel">
+              <h6 class="mb-3">Komposisi Kategori (7 hari)</h6>
+              <div class="chart-box"><canvas id="chartPie"></canvas></div>
+            </div>
+          </div>
+        </div>
+        <div class="row g-3">
+          <div class="col-lg-6">
+            <div class="panel">
+              <h6>Top Produk Hari Ini</h6>
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Produk</th>
+                      <th>Qty</th>
+                      <th>Omzet</th>
+                    </tr>
+                  </thead>
+                  <tbody id="topBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+          <div class="col-lg-6">
+            <div class="panel">
+              <h6>Stok Menipis</h6>
+              <div class="table-responsive">
+                <table class="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Produk</th>
+                      <th>Stok</th>
+                      <th>Min</th>
+                    </tr>
+                  </thead>
+                  <tbody id="lowBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    initShell('dashboard', 'Dashboard');
+    (async () => {
+      try {
+        const { data } = await api('/dashboard');
+        qs('#statSales').textContent = formatRp(data.today_sales);
+        qs('#statProfit').textContent = formatRp(data.total_profit);
+        qs('#statTrx').textContent = data.today_transactions;
+        qs('#statLow').textContent = (data.low_stock || []).length;
+        qs('#statTop').textContent = (data.top_products && data.top_products[0]) ? data.top_products[0].product_name : '—';
+
+        qs('#periodBody').innerHTML = (data.period_metrics || []).map(p => `
+      <tr>
+        <td class="text-nowrap">${p.label}</td>
+        <td>${p.transaction_count}</td>
+        <td>${formatRp(p.profit)}</td>
+        <td>${p.top_quantity_product ? p.top_quantity_product.product_name : '—'}</td>
+        <td>${p.top_quantity_product ? p.top_quantity_product.quantity : '—'}</td>
+        <td>${p.top_transaction_product ? p.top_transaction_product.product_name : '—'}</td>
+        <td>${p.top_transaction_product ? p.top_transaction_product.transactions : '—'}</td>
+        <td>${p.top_revenue_product ? p.top_revenue_product.product_name : '—'}</td>
+        <td>${p.top_revenue_product ? formatRp(p.top_revenue_product.revenue) : '—'}</td>
+        <td>${p.top_price_product ? p.top_price_product.product_name : '—'}</td>
+        <td>${p.top_price_product ? formatRp(p.top_price_product.highest_price) : '—'}</td>
+      </tr>`).join('') || '<tr><td colspan="11" class="text-muted">Belum ada transaksi</td></tr>';
+
+        qs('#topBody').innerHTML = (data.top_products || []).map(p =>
+          `<tr><td>${p.product_name}</td><td>${p.quantity}</td><td>${formatRp(p.revenue)}</td></tr>`
+        ).join('') || '<tr><td colspan="3" class="text-muted">Belum ada penjualan</td></tr>';
+
+        qs('#lowBody').innerHTML = (data.low_stock || []).map(p =>
+          `<tr><td>${p.name}</td><td><span class="badge badge-low">${p.stock}</span></td><td>${p.min_stock}</td></tr>`
+        ).join('') || '<tr><td colspan="3" class="text-muted">Semua stok aman</td></tr>';
+
+        const trend = data.sales_trend_7d || [];
+        new Chart(qs('#chartBar'), {
+          type: 'bar',
+          data: {
+            labels: trend.map(t => t.period),
+            datasets: [{ label: 'Omzet', data: trend.map(t => t.total), backgroundColor: '#0d9488' }]
+          },
+          options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+        });
+
+        const cats = data.category_sales_7d || [];
+        new Chart(qs('#chartPie'), {
+          type: 'pie',
+          data: {
+            labels: cats.map(c => c.category_name),
+            datasets: [{ data: cats.map(c => c.total), backgroundColor: ['#0d9488', '#0284c7', '#ca8a04', '#dc2626', '#7c3aed', '#64748b'] }]
+          },
+          options: { responsive: true, maintainAspectRatio: false }
+        });
+      } catch (e) { toast(e.message, 'error'); }
+    })();
+  </script>
+</body>
+
+</html>

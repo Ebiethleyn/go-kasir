@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pengaturan — Go Kasir</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <div class="main">
+    <div class="topbar">
+      <div class="d-flex align-items-center gap-2">
+        <button class="menu-toggle" id="btnMenu"><i class="bi bi-list"></i></button>
+        <h5 class="mb-0" id="pageTitle">Pengaturan</h5>
+      </div>
+      <span class="text-muted small" id="topOwner"></span>
+    </div>
+    <div class="content">
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="panel">
+            <h6 class="mb-3">Profil Owner</h6>
+            <div class="mb-2"><label class="form-label">Nama Lengkap</label><input id="fullName" class="form-control"></div>
+            <div class="mb-2"><label class="form-label">Email</label><input id="email" class="form-control"></div>
+            <div class="mb-2"><label class="form-label">Telepon</label><input id="phone" class="form-control"></div>
+            <button class="btn btn-accent" id="btnProfile">Simpan Profil</button>
+            <hr>
+            <h6 class="mb-3">Ganti Password</h6>
+            <div class="mb-2"><label class="form-label">Password Lama</label><input type="password" id="oldPass" class="form-control"></div>
+            <div class="mb-2"><label class="form-label">Password Baru</label><input type="password" id="newPass" class="form-control"></div>
+            <button class="btn btn-outline-secondary" id="btnPass">Ubah Password</button>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="panel">
+            <h6 class="mb-3">Pengaturan Toko</h6>
+            <div class="mb-2"><label class="form-label">Nama Toko</label><input id="storeName" class="form-control"></div>
+            <div class="mb-2"><label class="form-label">Alamat</label><input id="storeAddress" class="form-control"></div>
+            <div class="mb-2"><label class="form-label">Telepon</label><input id="storePhone" class="form-control"></div>
+            <div class="row g-2">
+              <div class="col-6"><label class="form-label">Prefix Invoice</label><input id="invPrefix" class="form-control"></div>
+              <div class="col-6"><label class="form-label">Pajak Default (%)</label><input type="number" step="0.01" id="taxPct" class="form-control"></div>
+              <div class="col-6"><label class="form-label">Min Stok Default</label><input type="number" id="minStock" class="form-control"></div>
+              <div class="col-6"><label class="form-label">Lebar Struk (mm)</label>
+                <select id="receiptW" class="form-select"><option value="80">80</option><option value="58">58</option></select>
+              </div>
+            </div>
+            <button class="btn btn-accent mt-3" id="btnStore">Simpan Pengaturan</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+initShell('settings', 'Pengaturan');
+(async () => {
+  const [prof, set] = await Promise.all([api('/auth/profile'), api('/settings')]);
+  qs('#fullName').value = prof.data.full_name || '';
+  qs('#email').value = prof.data.email || '';
+  qs('#phone').value = prof.data.phone || '';
+  const s = set.data;
+  qs('#storeName').value = s.store_name;
+  qs('#storeAddress').value = s.store_address || '';
+  qs('#storePhone').value = s.store_phone || '';
+  qs('#invPrefix').value = s.invoice_prefix;
+  qs('#taxPct').value = s.tax_percent;
+  qs('#minStock').value = s.default_min_stock;
+  qs('#receiptW').value = s.receipt_width_mm;
+})().catch(e => toast(e.message,'error'));
+
+qs('#btnProfile').onclick = async () => {
+  try {
+    const res = await api('/auth/profile', { method:'PUT', body: JSON.stringify({
+      full_name: qs('#fullName').value, email: qs('#email').value, phone: qs('#phone').value
+    })});
+    const owner = Auth.getOwner() || {};
+    Auth.setSession({ access_token: Auth.getToken(), refresh_token: Auth.getRefresh(), expires_at: localStorage.getItem('expires_at'), owner: { ...owner, ...res.data } });
+    toast('Profil disimpan');
+  } catch(e){ toast(e.message,'error'); }
+};
+
+qs('#btnPass').onclick = async () => {
+  try {
+    await api('/auth/change-password', { method:'POST', body: JSON.stringify({
+      old_password: qs('#oldPass').value, new_password: qs('#newPass').value
+    })});
+    toast('Password diganti'); qs('#oldPass').value=''; qs('#newPass').value='';
+  } catch(e){ toast(e.message,'error'); }
+};
+
+qs('#btnStore').onclick = async () => {
+  try {
+    await api('/settings', { method:'PUT', body: JSON.stringify({
+      store_name: qs('#storeName').value, store_address: qs('#storeAddress').value,
+      store_phone: qs('#storePhone').value, invoice_prefix: qs('#invPrefix').value,
+      tax_percent: Number(qs('#taxPct').value), default_min_stock: Number(qs('#minStock').value),
+      receipt_width_mm: Number(qs('#receiptW').value), currency_symbol: 'Rp'
+    })});
+    toast('Pengaturan toko disimpan');
+  } catch(e){ toast(e.message,'error'); }
+};
+</script>
+</body>
+</html>

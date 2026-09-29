@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kasir — Go Kasir</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/app.css" rel="stylesheet">
+</head>
+
+<body>
+  <div class="app-shell" id="appShell">
+    <div class="main">
+      <div class="topbar">
+        <div class="d-flex align-items-center gap-2">
+          <button class="menu-toggle" id="btnMenu"><i class="bi bi-list"></i></button>
+          <h5 class="mb-0" id="pageTitle">Kasir (POS)</h5>
+        </div>
+        <span class="text-muted small" id="topOwner"></span>
+      </div>
+      <div class="content">
+        <div class="pos-layout">
+          <div>
+            <div class="panel">
+              <div class="input-group mb-3">
+                <span class="input-group-text"><i class="bi bi-search"></i></span>
+                <input type="text" id="searchProduct" class="form-control form-control-lg"
+                  placeholder="Ketik nama, barcode, atau SKU untuk mencari..." autocomplete="off">
+              </div>
+              <div class="d-flex justify-content-between align-items-center mb-2">
+                <h6 class="mb-0">Daftar Produk</h6>
+                <button type="button" class="btn btn-sm btn-outline-primary" id="btnAddSelected" disabled>
+                  <i class="bi bi-cart-plus"></i> Tambah Dipilih (<span id="selectedProductCount">0</span>)
+                </button>
+              </div>
+              <div id="searchResults"></div>
+            </div>
+          </div>
+          <div>
+            <div class="panel">
+              <h6 class="d-flex justify-content-between"><span>Keranjang</span><button
+                  class="btn btn-sm btn-outline-danger" id="btnClearCart">Kosongkan</button></h6>
+              <div id="cartList" style="max-height:280px;overflow:auto"></div>
+              <hr>
+              <div class="mb-2">
+                <label class="form-label small">Pelanggan (opsional)</label>
+                <select id="customerId" class="form-select form-select-sm">
+                  <option value="">Umum</option>
+                </select>
+              </div>
+              <div class="row g-2 mb-2">
+                <div class="col-6">
+                  <label class="form-label small">Diskon (Rp)</label>
+                  <input type="number" id="discAmount" class="form-control form-control-sm" value="0" min="0">
+                </div>
+                <div class="col-6">
+                  <label class="form-label small">Diskon (%)</label>
+                  <input type="number" id="discPercent" class="form-control form-control-sm" value="0" min="0"
+                    max="100">
+                </div>
+              </div>
+              <div class="mb-2">
+                <label class="form-label small">Pajak %</label>
+                <input type="number" id="taxPercent" class="form-control form-control-sm" value="0" step="0.01">
+              </div>
+              <div class="d-flex justify-content-between"><span>Subtotal</span><strong id="lblSubtotal">Rp 0</strong>
+              </div>
+              <div class="d-flex justify-content-between"><span>Diskon</span><strong id="lblDisc">Rp 0</strong></div>
+              <div class="d-flex justify-content-between"><span>Pajak</span><strong id="lblTax">Rp 0</strong></div>
+              <div class="d-flex justify-content-between fs-5 mt-1"><span>Total</span><strong id="lblTotal">Rp
+                  0</strong></div>
+              <hr>
+              <div class="mb-2">
+                <label class="form-label small">Metode Bayar</label>
+                <select id="payMethod" class="form-select form-select-sm">
+                  <option value="cash">Tunai</option>
+                  <option value="card">Kartu</option>
+                  <option value="qris">QRIS</option>
+                </select>
+              </div>
+              <div class="mb-2" id="cashBox">
+                <label class="form-label small">Bayar (Rp)</label>
+                <input type="number" id="paidAmount" class="form-control" value="0" min="0">
+                <div class="d-flex justify-content-between mt-1"><span>Kembalian</span><strong id="lblChange">Rp
+                    0</strong></div>
+              </div>
+              <button class="btn btn-accent w-100 mt-2" id="btnPay"><i class="bi bi-check2-circle"></i> Bayar &
+                Simpan</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="modal fade" id="receiptChoice" tabindex="-1" aria-labelledby="receiptChoiceTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="receiptChoiceTitle">Transaksi berhasil</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+        </div>
+        <div class="modal-body">Apakah Anda ingin mencetak struk?</div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" id="btnSkipReceipt" data-bs-dismiss="modal">Tanpa
+            Cetak</button>
+          <button type="button" class="btn btn-accent" id="btnPrintReceipt">Cetak Struk</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    initShell('pos', 'Kasir (POS)');
+    let cart = [];
+    let selectedProducts = new Map();
+    let visibleProducts = new Map();
+    let productCatalog = [];
+    let productSearchTimer;
+    let productSearchRequestId = 0;
+    async function loadMeta() {
+      const custRes = await api('/customers?limit=100');
+      qs('#customerId').innerHTML = '<option value="">Umum</option>' +
+        (custRes.data.items || []).map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+    }
+
+    function chooseReceipt() {
+      return new Promise(resolve => {
+        const modalEl = qs('#receiptChoice');
+        const modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+        const printButton = qs('#btnPrintReceipt');
+        const finish = shouldPrint => {
+          printButton.removeEventListener('click', onPrint);
+          modal.hide();
+          resolve(shouldPrint);
+        };
+        const onPrint = () => finish(true);
+        printButton.addEventListener('click', onPrint);
+        modalEl.addEventListener('hidden.bs.modal', () => {
+          printButton.removeEventListener('click', onPrint);
+          resolve(false);
+        }, { once: true });
+        modal.show();
+      });
+    }
+
+    function renderCart() {
+      const list = qs('#cartList');
+      if (!cart.length) {
+        list.innerHTML = '<p class="text-muted small mb-0">Keranjang kosong</p>';
+      } else {
+        list.innerHTML = cart.map((it, i) => `
+      <div class="cart-item">
+        <div class="d-flex justify-content-between">
+          <strong class="small">${it.name}</strong>
+          <button class="btn btn-sm btn-link text-danger p-0" data-rm="${i}"><i class="bi bi-x-lg"></i></button>
+        </div>
+        <div class="d-flex align-items-center gap-2 mt-1">
+          <input type="number" class="form-control form-control-sm" style="width:70px" value="${it.qty}" min="1" data-qty="${i}">
+          <span class="small text-muted">× ${formatRp(it.price)}</span>
+          <strong class="ms-auto small">${formatRp(it.qty * it.price - (it.discount || 0))}</strong>
+        </div>
+      </div>`).join('');
+      }
+      recalc();
+    }
+
+    function recalc() {
+      const sub = cart.reduce((s, it) => s + it.qty * it.price - (it.discount || 0), 0);
+      const discAmt = Number(qs('#discAmount').value) || 0;
+      const discPct = Number(qs('#discPercent').value) || 0;
+      const disc = discAmt + sub * discPct / 100;
+      const after = Math.max(0, sub - disc);
+      const taxPct = Number(qs('#taxPercent').value) || 0;
+      const tax = after * taxPct / 100;
+      const total = after + tax;
+      qs('#lblSubtotal').textContent = formatRp(sub);
+      qs('#lblDisc').textContent = formatRp(disc);
+      qs('#lblTax').textContent = formatRp(tax);
+      qs('#lblTotal').textContent = formatRp(total);
+      const method = qs('#payMethod').value;
+      qs('#cashBox').style.display = method === 'cash' ? 'block' : 'none';
+      const paid = method === 'cash' ? (Number(qs('#paidAmount').value) || 0) : total;
+      qs('#lblChange').textContent = formatRp(Math.max(0, paid - total));
+      return { sub, disc, tax, total, taxPct };
+    }
+
+    function addToCart(p) {
+      const existing = cart.find(c => c.product_id === p.id);
+      if (existing) existing.qty += 1;
+      else cart.push({ product_id: p.id, name: p.name, price: p.sell_price, qty: 1, discount: 0, stock: p.stock });
+      renderCart();
+    }
+
+    function renderProducts(items) {
+      visibleProducts = new Map(items.map(p => [String(p.id), p]));
+      qs('#searchResults').innerHTML = items.map(p => `
+    <div class="product-result d-flex align-items-center gap-3" data-id="${p.id}">
+      <input class="form-check-input m-0 flex-shrink-0" type="checkbox" data-select-product="${p.id}"
+        aria-label="Pilih produk" ${selectedProducts.has(String(p.id)) ? 'checked' : ''}>
+      <div class="flex-grow-1">
+        <div class="d-flex justify-content-between gap-2">
+          <strong>${p.name}</strong><span class="text-nowrap">${formatRp(p.sell_price)}</span>
+        </div>
+        <div class="small text-muted">${p.sku} · stok ${p.stock}</div>
+      </div>
+      <button type="button" class="btn btn-sm btn-outline-secondary flex-shrink-0" data-add-product
+        title="Tambah satu ke keranjang" aria-label="Tambah ${p.name} satu ke keranjang">
+        <i class="bi bi-plus-lg"></i>
+      </button>
+    </div>`).join('') || '<p class="text-muted">Tidak ada produk</p>';
+      updateSelectedProductControl();
+    }
+
+    function updateSelectedProductControl() {
+      qs('#selectedProductCount').textContent = selectedProducts.size;
+      qs('#btnAddSelected').disabled = selectedProducts.size === 0;
+    }
+
+    async function loadProductCatalog() {
+      const { data } = await api('/products?limit=100');
+      productCatalog = data.items || [];
+      renderProducts(productCatalog);
+    }
+
+    async function searchProducts(query, requestId) {
+      if (!query) {
+        if (requestId === productSearchRequestId) renderProducts(productCatalog);
+        return;
+      }
+      const { data } = await api('/products/search?q=' + encodeURIComponent(query));
+      if (requestId === productSearchRequestId) renderProducts(data || []);
+    }
+
+    qs('#searchProduct').addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+      const requestId = ++productSearchRequestId;
+      clearTimeout(productSearchTimer);
+      productSearchTimer = setTimeout(() => {
+        searchProducts(query, requestId).catch(error => {
+          if (requestId === productSearchRequestId) toast(error.message, 'error');
+        });
+      }, 250);
+    });
+
+    qs('#searchProduct').addEventListener('keydown', async (e) => {
+      if (e.key !== 'Enter') return;
+      e.preventDefault();
+      clearTimeout(productSearchTimer);
+      const q = e.target.value.trim();
+      if (!q) {
+        productSearchRequestId++;
+        renderProducts(productCatalog);
+        return;
+      }
+      const requestId = ++productSearchRequestId;
+      try {
+        const look = await api('/products/lookup?code=' + encodeURIComponent(q));
+        if (requestId !== productSearchRequestId) return;
+        addToCart(look.data);
+        e.target.value = '';
+        productSearchRequestId++;
+        renderProducts(productCatalog);
+      } catch {
+        if (requestId === productSearchRequestId) {
+          searchProducts(q, requestId).catch(error => toast(error.message, 'error'));
+        }
+      }
+    });
+
+    qs('#searchResults').addEventListener('click', (e) => {
+      if (e.target.closest('[data-select-product]')) return;
+      const el = e.target.closest('.product-result');
+      if (!el) return;
+      const addButton = e.target.closest('[data-add-product]');
+      if (addButton) {
+        const productId = el.dataset.id;
+        const product = visibleProducts.get(productId);
+        if (!product) return;
+        if (selectedProducts.delete(productId)) {
+          updateSelectedProductControl();
+          renderProducts(Array.from(visibleProducts.values()));
+        }
+        addToCart(product);
+        return;
+      }
+      const checkbox = el.querySelector('[data-select-product]');
+      checkbox.checked = !checkbox.checked;
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+
+    qs('#searchResults').addEventListener('change', (e) => {
+      const checkbox = e.target.closest('[data-select-product]');
+      if (!checkbox) return;
+      const productId = checkbox.dataset.selectProduct;
+      if (checkbox.checked) selectedProducts.set(productId, visibleProducts.get(productId));
+      else selectedProducts.delete(productId);
+      updateSelectedProductControl();
+    });
+
+    qs('#btnAddSelected').addEventListener('click', () => {
+      selectedProducts.forEach(p => {
+        const existing = cart.find(item => item.product_id === p.id);
+        if (existing) existing.qty += 1;
+        else cart.push({ product_id: p.id, name: p.name, price: p.sell_price, qty: 1, discount: 0, stock: p.stock });
+      });
+      selectedProducts.clear();
+      updateSelectedProductControl();
+      renderProducts(Array.from(visibleProducts.values()));
+      renderCart();
+    });
+
+    qs('#cartList').addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-rm]');
+      if (btn) { cart.splice(Number(btn.dataset.rm), 1); renderCart(); }
+    });
+    qs('#cartList').addEventListener('change', (e) => {
+      const inp = e.target.closest('[data-qty]');
+      if (inp) {
+        cart[Number(inp.dataset.qty)].qty = Math.max(1, Number(inp.value) || 1);
+        renderCart();
+      }
+    });
+
+    ['discAmount', 'discPercent', 'taxPercent', 'paidAmount', 'payMethod'].forEach(id => {
+      qs('#' + id).addEventListener('input', recalc);
+      qs('#' + id).addEventListener('change', recalc);
+    });
+
+    qs('#btnClearCart').addEventListener('click', () => { cart = []; renderCart(); });
+
+    qs('#btnPay').addEventListener('click', async () => {
+      if (!cart.length) return toast('Keranjang kosong', 'error');
+      const { total, taxPct } = recalc();
+      const method = qs('#payMethod').value;
+      const paid = method === 'cash' ? (Number(qs('#paidAmount').value) || 0) : total;
+      if (method === 'cash' && paid < total) return toast('Jumlah bayar kurang', 'error');
+      const cust = qs('#customerId').value;
+      try {
+        const body = {
+          customer_id: cust ? Number(cust) : null,
+          items: cart.map(c => ({ product_id: c.product_id, quantity: c.qty, discount_amount: c.discount || 0 })),
+          discount_amount: Number(qs('#discAmount').value) || 0,
+          discount_percent: Number(qs('#discPercent').value) || 0,
+          tax_percent: taxPct,
+          paid_amount: paid,
+          payment_method: method
+        };
+        const res = await api('/transactions', { method: 'POST', body: JSON.stringify(body) });
+        toast('Transaksi ' + res.data.invoice_no + ' berhasil');
+        cart = [];
+        qs('#paidAmount').value = 0;
+        qs('#discAmount').value = 0;
+        qs('#discPercent').value = 0;
+        renderCart();
+        if (await chooseReceipt()) {
+          await downloadAuth('/transactions/' + res.data.id + '/receipt', 'struk_' + res.data.invoice_no + '.pdf');
+        }
+      } catch (ex) { toast(ex.message, 'error'); }
+    });
+
+    loadMeta().then(async () => {
+      renderCart();
+      await loadProductCatalog();
+    }).catch(e => toast(e.message, 'error'));
+  </script>
+</body>
+
+</html>

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Backup — Go Kasir</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <div class="main">
+    <div class="topbar">
+      <div class="d-flex align-items-center gap-2">
+        <button class="menu-toggle" id="btnMenu"><i class="bi bi-list"></i></button>
+        <h5 class="mb-0" id="pageTitle">Backup & Export</h5>
+      </div>
+      <span class="text-muted small" id="topOwner"></span>
+    </div>
+    <div class="content">
+      <div class="row g-3">
+        <div class="col-lg-6">
+          <div class="panel">
+            <h6><i class="bi bi-database"></i> Backup Database</h6>
+            <p class="text-muted small">Menghasilkan dump SQL lengkap (membutuhkan <code>mysqldump</code> di PATH / Laragon).</p>
+            <button class="btn btn-accent" id="btnBackup"><i class="bi bi-download"></i> Backup Sekarang</button>
+            <hr>
+            <h6>Restore dari file .sql</h6>
+            <p class="text-muted small text-danger">Perhatian: restore akan menimpa data di database saat ini.</p>
+            <input type="file" id="restoreFile" accept=".sql" class="form-control mb-2">
+            <button class="btn btn-outline-danger" id="btnRestore">Restore</button>
+          </div>
+        </div>
+        <div class="col-lg-6">
+          <div class="panel">
+            <h6><i class="bi bi-file-earmark-excel"></i> Export Master Data (Excel)</h6>
+            <div class="d-grid gap-2">
+              <button class="btn btn-outline-success" data-type="products">Export Produk</button>
+              <button class="btn btn-outline-success" data-type="categories">Export Kategori</button>
+              <button class="btn btn-outline-success" data-type="customers">Export Pelanggan</button>
+              <button class="btn btn-outline-success" data-type="transactions">Export Transaksi</button>
+            </div>
+          </div>
+          <div class="panel mt-3">
+            <h6>Activity Log</h6>
+            <div class="table-responsive" style="max-height:280px;overflow:auto">
+              <table class="table table-sm"><thead><tr><th>Waktu</th><th>Aksi</th><th>Detail</th></tr></thead><tbody id="logBody"></tbody></table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+initShell('backup', 'Backup & Export');
+
+qs('#btnBackup').onclick = async () => {
+  try {
+    await downloadAuth('/backup', 'backup_kasir.sql');
+    toast('Backup berhasil diunduh');
+    loadLogs();
+  } catch(e){ toast(e.message,'error'); }
+};
+
+qs('#btnRestore').onclick = async () => {
+  const file = qs('#restoreFile').files[0];
+  if (!file) return toast('Pilih file .sql', 'error');
+  if (!confirm('Yakin restore? Data saat ini bisa tertimpa.')) return;
+  const fd = new FormData(); fd.append('file', file);
+  try {
+    await api('/backup/restore', { method:'POST', body: fd });
+    toast('Restore berhasil'); loadLogs();
+  } catch(e){ toast(e.message,'error'); }
+};
+
+qsa('[data-type]').forEach(btn => {
+  btn.onclick = async () => {
+    try {
+      await downloadAuth('/export/master?type=' + btn.dataset.type, 'master_' + btn.dataset.type + '.xlsx');
+    } catch(e){ toast(e.message,'error'); }
+  };
+});
+
+async function loadLogs() {
+  const { data } = await api('/activity-logs?limit=30');
+  qs('#logBody').innerHTML = (data.items||[]).map(l =>
+    `<tr><td>${new Date(l.created_at).toLocaleString('id-ID')}</td><td>${l.action}</td><td>${l.details||''}</td></tr>`).join('');
+}
+loadLogs().catch(e => toast(e.message,'error'));
+</script>
+</body>
+</html>

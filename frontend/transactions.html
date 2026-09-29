@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Transaksi — Go Kasir</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="assets/css/app.css" rel="stylesheet">
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <div class="main">
+    <div class="topbar">
+      <div class="d-flex align-items-center gap-2">
+        <button class="menu-toggle" id="btnMenu"><i class="bi bi-list"></i></button>
+        <h5 class="mb-0" id="pageTitle">Riwayat Transaksi</h5>
+      </div>
+      <span class="text-muted small" id="topOwner"></span>
+    </div>
+    <div class="content">
+      <div class="panel">
+        <div class="row g-2 mb-3">
+          <div class="col-auto"><input type="date" id="from" class="form-control"></div>
+          <div class="col-auto"><input type="date" id="to" class="form-control"></div>
+          <div class="col-auto"><input id="search" class="form-control" placeholder="No. invoice"></div>
+          <div class="col-auto">
+            <select id="status" class="form-select"><option value="">Semua status</option><option value="completed">Selesai</option><option value="voided">Void</option></select>
+          </div>
+          <div class="col-auto">
+            <select id="pay" class="form-select"><option value="">Semua metode</option><option value="cash">Tunai</option><option value="card">Kartu</option><option value="qris">QRIS</option></select>
+          </div>
+          <div class="col-auto"><button class="btn btn-outline-secondary" id="btnFilter">Filter</button></div>
+        </div>
+        <div class="table-responsive">
+          <table class="table table-sm table-hover">
+            <thead><tr><th>Invoice</th><th>Tanggal</th><th>Total</th><th>Metode</th><th>Status</th><th></th></tr></thead>
+            <tbody id="body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div class="modal fade" id="detailModal" tabindex="-1"><div class="modal-dialog modal-lg"><div class="modal-content">
+  <div class="modal-header"><h5 class="modal-title" id="dTitle">Detail</h5><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body" id="dBody"></div>
+  <div class="modal-footer">
+    <button class="btn btn-outline-secondary" id="btnReceipt"><i class="bi bi-printer"></i> Struk PDF</button>
+    <button class="btn btn-danger" id="btnVoid">Void</button>
+  </div>
+</div></div></div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="assets/js/app.js"></script>
+<script>
+initShell('transactions', 'Riwayat Transaksi');
+const detailModal = new bootstrap.Modal('#detailModal');
+let currentId = null;
+qs('#from').value = daysAgoStr(30); qs('#to').value = todayStr();
+
+async function load() {
+  const p = new URLSearchParams({
+    from: qs('#from').value, to: qs('#to').value, search: qs('#search').value,
+    status: qs('#status').value, payment_method: qs('#pay').value, limit: 100
+  });
+  const { data } = await api('/transactions?' + p);
+  qs('#body').innerHTML = (data.items||[]).map(t => `
+    <tr class="${t.status==='voided'?'table-secondary':''}">
+      <td>${t.invoice_no}</td>
+      <td>${new Date(t.created_at).toLocaleString('id-ID')}</td>
+      <td>${formatRp(t.total)}</td>
+      <td>${t.payment_method}</td>
+      <td><span class="badge ${t.status==='completed'?'text-bg-success':'text-bg-secondary'}">${t.status}</span></td>
+      <td><button class="btn btn-sm btn-outline-primary" data-id="${t.id}">Detail</button></td>
+    </tr>`).join('');
+}
+
+qs('#body').addEventListener('click', async e => {
+  const btn = e.target.closest('[data-id]');
+  if (!btn) return;
+  currentId = btn.dataset.id;
+  const { data: t } = await api('/transactions/' + currentId);
+  qs('#dTitle').textContent = t.invoice_no;
+  qs('#btnVoid').style.display = t.status === 'completed' ? '' : 'none';
+  qs('#dBody').innerHTML = `
+    <p class="mb-1">Tanggal: ${new Date(t.created_at).toLocaleString('id-ID')} · ${t.payment_method} · ${t.status}</p>
+    ${t.void_reason ? `<p class="text-danger">Void: ${t.void_reason}</p>` : ''}
+    <table class="table table-sm"><thead><tr><th>Item</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr></thead>
+    <tbody>${(t.items||[]).map(i=>`<tr><td>${i.product_name}</td><td>${i.quantity}</td><td>${formatRp(i.sell_price)}</td><td>${formatRp(i.subtotal)}</td></tr>`).join('')}</tbody></table>
+    <div class="text-end">
+      <div>Subtotal: ${formatRp(t.subtotal)}</div>
+      <div>Diskon: ${formatRp(t.discount_amount)}</div>
+      <div>Pajak: ${formatRp(t.tax_amount)}</div>
+      <strong>Total: ${formatRp(t.total)}</strong>
+    </div>`;
+  detailModal.show();
+});
+
+qs('#btnReceipt').onclick = async () => {
+  if (!currentId) return;
+  try { await downloadAuth('/transactions/' + currentId + '/receipt', 'struk.pdf'); }
+  catch(e){ toast(e.message,'error'); }
+};
+
+qs('#btnVoid').onclick = async () => {
+  const reason = prompt('Alasan pembatalan (wajib):');
+  if (!reason) return;
+  try {
+    await api('/transactions/' + currentId + '/void', { method:'POST', body: JSON.stringify({ reason }) });
+    toast('Transaksi dibatalkan'); detailModal.hide(); load();
+  } catch(e){ toast(e.message,'error'); }
+};
+
+qs('#btnFilter').onclick = () => load().catch(e => toast(e.message,'error'));
+load().catch(e => toast(e.message,'error'));
+</script>
+</body>
+</html>
