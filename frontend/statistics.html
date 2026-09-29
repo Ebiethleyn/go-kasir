@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Statistika Toko — Go Kasir</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="assets/css/app.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-shell" id="appShell">
+        <div class="main">
+            <div class="topbar">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="menu-toggle" id="btnMenu"><i class="bi bi-list"></i></button>
+                    <h5 class="mb-0" id="pageTitle">Statistika Toko</h5>
+                </div>
+                <span class="text-muted small" id="topOwner"></span>
+            </div>
+            <div class="content">
+                <div class="panel">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-6 col-md-auto">
+                            <label class="form-label small mb-1" for="from">Dari tanggal</label>
+                            <input type="date" id="from" class="form-control">
+                        </div>
+                        <div class="col-6 col-md-auto">
+                            <label class="form-label small mb-1" for="to">Sampai tanggal</label>
+                            <input type="date" id="to" class="form-control">
+                        </div>
+                        <div class="col-6 col-md-auto">
+                            <label class="form-label small mb-1" for="groupBy">Tampilan grafik</label>
+                            <select id="groupBy" class="form-select">
+                                <option value="day">Harian</option>
+                                <option value="week">Mingguan</option>
+                                <option value="month">Bulanan</option>
+                                <option value="year">Tahunan</option>
+                            </select>
+                        </div>
+                        <div class="col-6 col-md-auto">
+                            <button class="btn btn-accent w-100" id="btnLoad"><i class="bi bi-arrow-clockwise"></i>
+                                Tampilkan</button>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-3" role="group" aria-label="Pilih periode cepat">
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="today">Hari ini</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="7d">7 hari</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="30d">30 hari</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="month">Bulan ini</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="quarter">Kuartal ini</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="semester">Semester ini</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="year">Tahun ini</button>
+                    </div>
+                </div>
+
+                <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-3">
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Omzet</div>
+                            <div class="value fs-5" id="metricRevenue">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Laba Kotor</div>
+                            <div class="value fs-5" id="metricProfit">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">HPP</div>
+                            <div class="value fs-5" id="metricCogs">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Transaksi</div>
+                            <div class="value fs-5" id="metricTransactions">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Rata-rata Transaksi</div>
+                            <div class="value fs-5" id="metricAverage">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Unit Terjual</div>
+                            <div class="value fs-5" id="metricUnits">—</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-xl-8">
+                        <div class="panel">
+                            <h6 class="mb-3">Tren Omzet</h6>
+                            <div class="chart-box"><canvas id="salesChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-xl-4">
+                        <div class="panel">
+                            <h6 class="mb-3">Metode Pembayaran</h6>
+                            <div class="chart-box"><canvas id="paymentChart"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <div class="panel">
+                            <h6 class="mb-3">Omzet per Kategori</h6>
+                            <div class="chart-box"><canvas id="categoryChart"></canvas></div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="panel">
+                            <h6 class="mb-3">Perbandingan Periode Berjalan</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover align-middle mb-0">
+                                    <thead>
+                                        <tr>
+                                            <th>Periode</th>
+                                            <th>Transaksi</th>
+                                            <th>Keuntungan</th>
+                                            <th>Produk terlaris</th>
+                                            <th>Qty</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="periodBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-lg-6">
+                        <div class="panel">
+                            <h6>Produk Terlaris</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Produk</th>
+                                            <th>Qty</th>
+                                            <th>Transaksi</th>
+                                            <th>Omzet</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="topProductsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-6">
+                        <div class="panel">
+                            <h6>Produk Kurang Laku</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Produk</th>
+                                            <th>Qty</th>
+                                            <th>Omzet</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="slowProductsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row g-3">
+                    <div class="col-lg-7">
+                        <div class="panel">
+                            <h6>Transaksi pada Periode Ini</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Invoice</th>
+                                            <th>Waktu</th>
+                                            <th>Pelanggan</th>
+                                            <th>Metode</th>
+                                            <th>Total</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="transactionsBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-lg-5">
+                        <div class="panel">
+                            <h6>Stok Menipis</h6>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-hover">
+                                    <thead>
+                                        <tr>
+                                            <th>Produk</th>
+                                            <th>Stok</th>
+                                            <th>Minimum</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="lowStockBody"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="assets/js/app.js"></script>
+    <script>
+        initShell('statistics', 'Statistika Toko');
+        let salesChart;
+        let paymentChart;
+        let categoryChart;
+        let isLoading = false;
+        let currentChartData;
+
+        function localDate(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        }
+
+        function setDateRange(preset) {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            if (preset === '7d') start.setDate(start.getDate() - 6);
+            if (preset === '30d') start.setDate(start.getDate() - 29);
+            if (preset === 'month') start.setDate(1);
+            if (preset === 'quarter') start.setMonth(Math.floor(today.getMonth() / 3) * 3, 1);
+            if (preset === 'semester') start.setMonth(today.getMonth() < 6 ? 0 : 6, 1);
+            if (preset === 'year') start.setMonth(0, 1);
+            qs('#from').value = localDate(start);
+            qs('#to').value = localDate(today);
+            loadStatistics().catch(error => toast(error.message, 'error'));
+        }
+
+        function queryRange() {
+            return new URLSearchParams({ from: qs('#from').value, to: qs('#to').value });
+        }
+
+        function chartColors() {
+            const styles = getComputedStyle(document.documentElement);
+            return {
+                text: styles.getPropertyValue('--text').trim(),
+                muted: styles.getPropertyValue('--muted').trim(),
+                accent: styles.getPropertyValue('--accent').trim(),
+                border: styles.getPropertyValue('--border').trim()
+            };
+        }
+
+        function renderCharts(sales, payment, categories) {
+            currentChartData = { sales, payment, categories };
+            const colors = chartColors();
+            salesChart?.destroy();
+            paymentChart?.destroy();
+            categoryChart?.destroy();
+
+            salesChart = new Chart(qs('#salesChart'), {
+                type: 'line',
+                data: {
+                    labels: sales.map(item => item.period),
+                    datasets: [{
+                        label: 'Omzet',
+                        data: sales.map(item => item.total),
+                        borderColor: colors.accent,
+                        backgroundColor: colors.accent + '33',
+                        fill: true,
+                        tension: .3,
+                        pointRadius: 3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { labels: { color: colors.text } } },
+                    scales: {
+                        x: { ticks: { color: colors.muted }, grid: { color: colors.border } },
+                        y: { ticks: { color: colors.muted }, grid: { color: colors.border } }
+                    }
+                }
+            });
+
+            const palette = [colors.accent, '#3988a3', '#bd8130', '#bf5d52', '#75845b', '#826b92'];
+            paymentChart = new Chart(qs('#paymentChart'), {
+                type: 'doughnut',
+                data: {
+                    labels: payment.map(item => item.payment_method),
+                    datasets: [{ data: payment.map(item => item.total), backgroundColor: palette, borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom', labels: { color: colors.text } } }
+                }
+            });
+
+            categoryChart = new Chart(qs('#categoryChart'), {
+                type: 'bar',
+                data: {
+                    labels: categories.map(item => item.category_name),
+                    datasets: [{ label: 'Omzet', data: categories.map(item => item.total), backgroundColor: palette, borderRadius: 4 }]
+                },
+                options: {
+                    indexAxis: 'y',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { ticks: { color: colors.muted }, grid: { color: colors.border } },
+                        y: { ticks: { color: colors.text }, grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function renderProductRows(selector, products, emptyMessage, includeTransactions = false) {
+            const columnCount = includeTransactions ? 4 : 3;
+            qs(selector).innerHTML = products.length ? products.map(product => `
+                <tr><td>${product.product_name}</td><td>${product.quantity}</td>${includeTransactions ? `<td>${product.transactions}</td>` : ''}<td>${formatRp(product.revenue)}</td></tr>`).join('')
+                : `<tr><td colspan="${columnCount}" class="text-muted">${emptyMessage}</td></tr>`;
+        }
+
+        async function loadStatistics() {
+            if (isLoading) return;
+            if (!qs('#from').value || !qs('#to').value) return toast('Pilih tanggal awal dan akhir', 'error');
+            if (qs('#from').value > qs('#to').value) return toast('Tanggal awal tidak boleh melewati tanggal akhir', 'error');
+            isLoading = true;
+            qs('#btnLoad').disabled = true;
+            try {
+                const range = queryRange();
+                const salesParams = new URLSearchParams(range);
+                salesParams.set('group_by', qs('#groupBy').value);
+                const transactionParams = new URLSearchParams(range);
+                transactionParams.set('limit', '10');
+                const [salesResponse, productsResponse, transactionsResponse, dashboardResponse] = await Promise.all([
+                    api('/reports/sales?' + salesParams),
+                    api('/reports/products?' + range),
+                    api('/reports/transactions?' + transactionParams),
+                    api('/dashboard')
+                ]);
+                const salesData = salesResponse.data;
+                const productsData = productsResponse.data;
+                const summary = salesData.summary || {};
+
+                qs('#metricRevenue').textContent = formatRp(summary.total_revenue);
+                qs('#metricProfit').textContent = formatRp(summary.gross_profit);
+                qs('#metricCogs').textContent = formatRp(summary.total_cogs);
+                qs('#metricTransactions').textContent = Number(summary.transaction_count || 0).toLocaleString('id-ID');
+                qs('#metricAverage').textContent = formatRp(summary.avg_transaction);
+                qs('#metricUnits').textContent = Number(summary.total_items_sold || 0).toLocaleString('id-ID');
+
+                renderCharts(salesData.trend || [], salesData.by_payment || [], salesData.by_category || []);
+
+                const periods = dashboardResponse.data.period_metrics || [];
+                qs('#periodBody').innerHTML = periods.map(period => `
+      <tr>
+        <td class="text-nowrap">${period.label}</td>
+        <td>${period.transaction_count}</td>
+        <td>${formatRp(period.profit)}</td>
+        <td>${period.top_quantity_product?.product_name || '—'}</td>
+        <td>${period.top_quantity_product?.quantity ?? '—'}</td>
+      </tr>`).join('') || '<tr><td colspan="5" class="text-muted">Belum ada data</td></tr>';
+
+                renderProductRows('#topProductsBody', productsData.top_products || [], 'Belum ada penjualan pada periode ini', true);
+                renderProductRows('#slowProductsBody', productsData.slow_products || [], 'Belum ada data produk');
+                qs('#transactionsBody').innerHTML = (transactionsResponse.data.items || []).map(transaction => `
+      <tr>
+        <td>${transaction.invoice_no}</td>
+        <td class="text-nowrap">${new Date(transaction.created_at).toLocaleString('id-ID')}</td>
+        <td>${transaction.customer?.name || 'Umum'}</td>
+        <td>${transaction.payment_method}</td>
+        <td class="text-nowrap">${formatRp(transaction.total)}</td>
+      </tr>`).join('') || '<tr><td colspan="5" class="text-muted">Belum ada transaksi pada periode ini</td></tr>';
+                qs('#lowStockBody').innerHTML = (dashboardResponse.data.low_stock || []).map(product => `
+      <tr><td>${product.name}</td><td>${product.stock} ${product.unit}</td><td>${product.min_stock} ${product.unit}</td></tr>`).join('')
+                    || '<tr><td colspan="3" class="text-muted">Semua stok aman</td></tr>';
+            } catch (error) {
+                toast(error.message, 'error');
+            } finally {
+                isLoading = false;
+                qs('#btnLoad').disabled = false;
+            }
+        }
+
+        qsa('[data-preset]').forEach(button => {
+            button.addEventListener('click', () => setDateRange(button.dataset.preset));
+        });
+        qs('#btnLoad').addEventListener('click', () => loadStatistics());
+        document.addEventListener('themechange', () => {
+            if (currentChartData) renderCharts(currentChartData.sales, currentChartData.payment, currentChartData.categories);
+        });
+
+        setDateRange('30d');
+    </script>
+</body>
+
+</html>

@@ -11,6 +11,7 @@ function applyTheme(theme) {
     button.setAttribute('title', darkMode ? 'Gunakan mode terang' : 'Gunakan mode gelap');
     button.innerHTML = `<i class="bi ${darkMode ? 'bi-sun' : 'bi-moon-stars'}"></i><span>${darkMode ? 'Mode terang' : 'Mode gelap'}</span>`;
   });
+  document.dispatchEvent(new CustomEvent('themechange', { detail: { theme: nextTheme } }));
 }
 
 let preferredTheme = 'light';
@@ -163,6 +164,8 @@ function renderShell(active) {
   const owner = Auth.getOwner() || {};
   const links = [
     { href: 'dashboard.html', icon: 'bi-speedometer2', label: 'Dashboard', key: 'dashboard' },
+    { href: 'statistics.html', icon: 'bi-bar-chart-line', label: 'Statistika Toko', key: 'statistics' },
+    { href: 'finance.html', icon: 'bi-cash-coin', label: 'Likuiditas & Arus Kas', key: 'finance' },
     { href: 'pos.html', icon: 'bi-cart3', label: 'Kasir (POS)', key: 'pos' },
     { href: 'products.html', icon: 'bi-box-seam', label: 'Produk', key: 'products' },
     { href: 'customers.html', icon: 'bi-people', label: 'Pelanggan', key: 'customers' },

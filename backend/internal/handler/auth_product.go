@@ -28,6 +28,7 @@ type Handlers struct {
 	Setting  *service.SettingService
 	Dash     *service.DashboardService
 	Report   *service.ReportService
+	Finance  *service.FinanceService
 	Cfg      *config.Config
 	Products *repository.ProductRepo
 	Cats     *repository.CategoryRepo
@@ -192,9 +193,9 @@ func (h *Handlers) DeleteCategory(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handlers) ListProducts(w http.ResponseWriter, r *http.Request) {
 	f := repository.ProductFilter{
-		Search: r.URL.Query().Get("search"),
-		Page:   atoiDefault(r.URL.Query().Get("page"), 1),
-		Limit:  atoiDefault(r.URL.Query().Get("limit"), 20),
+		Search:   r.URL.Query().Get("search"),
+		Page:     atoiDefault(r.URL.Query().Get("page"), 1),
+		Limit:    atoiDefault(r.URL.Query().Get("limit"), 20),
 		LowStock: r.URL.Query().Get("low_stock") == "1",
 	}
 	if cid := r.URL.Query().Get("category_id"); cid != "" {

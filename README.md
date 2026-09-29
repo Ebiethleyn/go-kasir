@@ -12,6 +12,21 @@ Go Kasir adalah aplikasi point of sale (POS) berbasis web untuk operasional toko
 - Peringkat produk berdasarkan kuantitas, jumlah transaksi berbeda, omzet, dan harga satuan tertinggi.
 - Keuntungan total sepanjang waktu dan per periode dihitung dari `(harga jual - harga beli) x kuantitas` pada item transaksi selesai. Nilai ini adalah margin kotor produk; diskon tingkat transaksi dan biaya operasional tidak dikurangkan.
 
+### Statistika Toko
+
+- Pilih rentang tanggal dan pengelompokan grafik harian, mingguan, bulanan, atau tahunan.
+- Lihat omzet, laba kotor, HPP, jumlah transaksi, rata-rata transaksi, dan unit terjual.
+- Analisis tren omzet, komposisi metode pembayaran, omzet per kategori, dan perbandingan periode berjalan.
+- Bandingkan produk terlaris/kurang laku, jumlah unit, jumlah transaksi, omzet, transaksi terbaru, dan stok menipis.
+
+### Likuiditas & Arus Kas
+
+- Catat suntikan modal, tambahan modal, pembelian stok, biaya operasional, return investasi, pemasukan lain, dan pengeluaran lain.
+- Lihat saldo kas estimasi, modal disetor, ROI, laba bersih, serta ringkasan arus kas harian, mingguan, bulanan, kuartalan, semesteran, dan tahunan.
+- Nilai likuiditas membandingkan estimasi saldo kas sepanjang waktu dengan rata-rata pengeluaran tercatat selama 90 hari terakhir.
+- Saldo bersifat estimasi, bukan rekonsiliasi rekening: catat saldo/modal awal dan transaksi non-POS agar hasil mendekati kondisi sebenarnya.
+- Pembelian stok mengurangi arus kas, tetapi tidak langsung dibebankan lagi ke laba. HPP diperhitungkan ketika barang terjual.
+
 ### Kasir (POS)
 
 - Katalog produk dengan pencarian nama/SKU/barcode dan dukungan lookup barcode.
@@ -81,6 +96,8 @@ go-kasir/
 ├── frontend/
 │   ├── index.html               # login
 │   ├── dashboard.html
+│   ├── statistics.html          # statistika toko
+│   ├── finance.html             # likuiditas dan arus kas
 │   ├── pos.html
 │   ├── products.html
 │   ├── customers.html
@@ -207,6 +224,10 @@ Route privat memerlukan header `Authorization: Bearer <access_token>`. Login dan
 | `PUT` | `/api/auth/profile` | Token | Memperbarui profil owner |
 | `POST` | `/api/auth/change-password` | Token | Mengganti kata sandi |
 | `GET` | `/api/dashboard` | Token | Data dashboard dan ringkasan periode |
+| `GET` | `/api/finance/summary` | Token | Ringkasan likuiditas dan arus kas |
+| `GET` | `/api/finance/entries` | Token | Jurnal modal dan pengeluaran |
+| `POST` | `/api/finance/entries` | Token | Catat arus kas |
+| `DELETE` | `/api/finance/entries/{id}` | Token | Hapus catatan arus kas |
 | `GET`, `POST` | `/api/categories` | Token | Daftar dan buat kategori |
 | `PUT`, `DELETE` | `/api/categories/{id}` | Token | Ubah atau hapus kategori |
 | `GET` | `/api/products` | Token | Daftar produk |

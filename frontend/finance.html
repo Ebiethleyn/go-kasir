@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Likuiditas & Arus Kas — Go Kasir</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+    <link href="assets/css/app.css" rel="stylesheet">
+</head>
+
+<body>
+    <div class="app-shell" id="appShell">
+        <div class="main">
+            <div class="topbar">
+                <div class="d-flex align-items-center gap-2">
+                    <button class="menu-toggle" id="btnMenu"><i class="bi bi-list"></i></button>
+                    <h5 class="mb-0" id="pageTitle">Likuiditas & Arus Kas</h5>
+                </div>
+                <span class="text-muted small" id="topOwner"></span>
+            </div>
+            <div class="content">
+                <div class="panel">
+                    <div class="row g-2 align-items-end">
+                        <div class="col-6 col-md-auto">
+                            <label for="from" class="form-label small mb-1">Dari tanggal</label>
+                            <input type="date" class="form-control" id="from">
+                        </div>
+                        <div class="col-6 col-md-auto">
+                            <label for="to" class="form-label small mb-1">Sampai tanggal</label>
+                            <input type="date" class="form-control" id="to">
+                        </div>
+                        <div class="col-12 col-md-auto">
+                            <button type="button" class="btn btn-accent w-100" id="btnLoad"><i
+                                    class="bi bi-arrow-clockwise"></i> Tampilkan</button>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap gap-2 mt-3" role="group" aria-label="Periode cepat">
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="today">Hari ini</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="week">Minggu ini</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="month">Bulan ini</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="quarter">Kuartal ini</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="semester">Semester ini</button>
+                        <button class="btn btn-sm btn-outline-secondary" data-preset="year">Tahun ini</button>
+                    </div>
+                </div>
+
+                <div class="row row-cols-2 row-cols-md-3 row-cols-xl-6 g-3 mb-3">
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Saldo Kas Estimasi</div>
+                            <div class="value fs-5" id="cashBalance">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Status Likuiditas</div>
+                            <div class="value fs-5" id="liquidityStatus">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Daya Tahan Kas</div>
+                            <div class="value fs-5" id="cashCoverage">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Modal Disetor</div>
+                            <div class="value fs-5" id="investedCapital">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">ROI Bersih</div>
+                            <div class="value fs-5" id="roi">—</div>
+                        </div>
+                    </div>
+                    <div class="col">
+                        <div class="stat-card">
+                            <div class="label">Laba Bersih Periode</div>
+                            <div class="value fs-5" id="periodProfit">—</div>
+                        </div>
+                    </div>
+                </div>
+                <p class="text-muted small" id="liquidityBasis"></p>
+
+                <div class="panel">
+                    <h6 class="mb-3">Catat Modal atau Pengeluaran</h6>
+                    <form id="financeForm">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-12 col-md-4">
+                                <label for="entryType" class="form-label small mb-1">Jenis arus kas</label>
+                                <select class="form-select" id="entryType" required>
+                                    <option value="capital_injection">Suntikan modal awal</option>
+                                    <option value="additional_capital">Tambahan modal</option>
+                                    <option value="product_purchase">Belanja produk / stok</option>
+                                    <option value="operating_expense">Pengeluaran operasional</option>
+                                    <option value="investment_return">Return investasi diterima</option>
+                                    <option value="other_income">Pemasukan lain</option>
+                                    <option value="other_expense">Pengeluaran lain</option>
+                                </select>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label for="entryAmount" class="form-label small mb-1">Nominal (Rp)</label>
+                                <input type="number" class="form-control" id="entryAmount" min="1" step="1" required>
+                            </div>
+                            <div class="col-6 col-md-2">
+                                <label for="entryDate" class="form-label small mb-1">Tanggal</label>
+                                <input type="date" class="form-control" id="entryDate" required>
+                            </div>
+                            <div class="col-12 col-md-3">
+                                <label for="entryDescription" class="form-label small mb-1">Keterangan</label>
+                                <input type="text" class="form-control" id="entryDescription" maxlength="255"
+                                    placeholder="Contoh: sewa toko">
+                            </div>
+                            <div class="col-12 col-md-1">
+                                <button type="submit" class="btn btn-accent w-100" id="btnSaveEntry"
+                                    aria-label="Simpan catatan"><i class="bi bi-plus-lg"></i></button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="panel">
+                    <h6 class="mb-3">Arus Kas per Periode Berjalan</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Periode</th>
+                                    <th>Omzet</th>
+                                    <th>Margin kotor</th>
+                                    <th>Modal masuk</th>
+                                    <th>Belanja produk</th>
+                                    <th>Operasional</th>
+                                    <th>Total keluar</th>
+                                    <th>Arus kas bersih</th>
+                                    <th>Laba bersih</th>
+                                    <th>ROI</th>
+                                </tr>
+                            </thead>
+                            <tbody id="periodBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <h6 class="mb-3">Jurnal Keuangan Periode Ini</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Tanggal</th>
+                                    <th>Jenis</th>
+                                    <th>Keterangan</th>
+                                    <th>Nominal</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="entriesBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="assets/js/app.js"></script>
+    <script>
+        initShell('finance', 'Likuiditas & Arus Kas');
+        let isLoading = false;
+        const entryLabels = {
+            capital_injection: 'Suntikan modal awal',
+            additional_capital: 'Tambahan modal',
+            product_purchase: 'Belanja produk / stok',
+            operating_expense: 'Pengeluaran operasional',
+            investment_return: 'Return investasi diterima',
+            other_income: 'Pemasukan lain',
+            other_expense: 'Pengeluaran lain'
+        };
+
+        function localDate(date) {
+            return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        }
+
+        function applyPeriod(period) {
+            const today = new Date();
+            const start = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+            if (period === 'week') start.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+            if (period === 'month') start.setDate(1);
+            if (period === 'quarter') start.setMonth(Math.floor(today.getMonth() / 3) * 3, 1);
+            if (period === 'semester') start.setMonth(today.getMonth() < 6 ? 0 : 6, 1);
+            if (period === 'year') start.setMonth(0, 1);
+            qs('#from').value = localDate(start);
+            qs('#to').value = localDate(today);
+            loadFinance().catch(error => toast(error.message, 'error'));
+        }
+
+        function rangeParams() {
+            return new URLSearchParams({ from: qs('#from').value, to: qs('#to').value });
+        }
+
+        function renderPeriods(periods) {
+            qs('#periodBody').innerHTML = periods.map(period => `
+    <tr>
+      <td class="text-nowrap">${period.label}</td>
+      <td>${formatRp(period.sales_revenue)}</td>
+      <td>${formatRp(period.gross_profit)}</td>
+      <td>${formatRp(period.invested_capital)}</td>
+      <td>${formatRp(period.product_purchases)}</td>
+      <td>${formatRp(period.operating_expenses)}</td>
+      <td>${formatRp(period.total_cash_outflow)}</td>
+      <td>${formatRp(period.net_cash_flow)}</td>
+      <td>${formatRp(period.net_profit)}</td>
+      <td>${Number(period.roi_percent || 0).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%</td>
+    </tr>`).join('') || '<tr><td colspan="10" class="text-muted">Belum ada catatan pada periode ini</td></tr>';
+        }
+
+        function escapeHTML(str) {
+            if (!str) return '—';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        function renderEntries(entries) {
+            qs('#entriesBody').innerHTML = entries.map(entry => `
+    <tr>
+      <td class="text-nowrap">${new Date(entry.occurred_at).toLocaleDateString('id-ID')}</td>
+      <td>${entryLabels[entry.entry_type] || entry.entry_type}</td>
+      <td>${escapeHTML(entry.description)}</td>
+      <td class="text-nowrap">${formatRp(entry.amount)}</td>
+      <td><button type="button" class="btn btn-sm btn-outline-danger" data-delete-entry="${entry.id}" aria-label="Hapus catatan" title="Hapus catatan"><i class="bi bi-trash"></i></button></td>
+    </tr>`).join('') || '<tr><td colspan="5" class="text-muted">Belum ada jurnal keuangan di rentang ini</td></tr>';
+        }
+
+        async function loadFinance() {
+            if (isLoading) return;
+            if (!qs('#from').value || !qs('#to').value) return toast('Pilih tanggal awal dan akhir', 'error');
+            if (qs('#from').value > qs('#to').value) return toast('Tanggal awal tidak boleh melewati tanggal akhir', 'error');
+            isLoading = true;
+            qs('#btnLoad').disabled = true;
+            try {
+                const params = rangeParams();
+                const [summaryResponse, entriesResponse] = await Promise.all([
+                    api('/finance/summary?' + params),
+                    api('/finance/entries?' + params + '&limit=100')
+                ]);
+                const data = summaryResponse.data;
+                const liquidity = data.liquidity || {};
+                const selected = data.selected_range || {};
+                qs('#cashBalance').textContent = formatRp(liquidity.cash_balance);
+                qs('#liquidityStatus').textContent = liquidity.status || '—';
+                qs('#cashCoverage').textContent = liquidity.average_monthly_outflow > 0
+                    ? `${Number(liquidity.coverage_months || 0).toLocaleString('id-ID', { maximumFractionDigits: 1 })} bulan`
+                    : 'Belum cukup data';
+                qs('#investedCapital').textContent = formatRp(data.all_time?.invested_capital);
+                qs('#roi').textContent = `${Number(data.all_time?.roi_percent || 0).toLocaleString('id-ID', { maximumFractionDigits: 1 })}%`;
+                qs('#periodProfit').textContent = formatRp(selected.net_profit);
+                qs('#liquidityBasis').textContent = `Rata-rata pengeluaran bulanan: ${formatRp(liquidity.average_monthly_outflow)}. ${liquidity.basis || ''}`;
+                renderPeriods(data.periods || []);
+                renderEntries(entriesResponse.data.items || []);
+            } catch (error) {
+                toast(error.message, 'error');
+            } finally {
+                isLoading = false;
+                qs('#btnLoad').disabled = false;
+            }
+        }
+
+        qsa('[data-preset]').forEach(button => button.addEventListener('click', () => applyPeriod(button.dataset.preset)));
+        qs('#btnLoad').addEventListener('click', () => loadFinance());
+        qs('#entryDate').value = localDate(new Date());
+
+        qs('#financeForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const button = qs('#btnSaveEntry');
+            button.disabled = true;
+            try {
+                await api('/finance/entries', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        entry_type: qs('#entryType').value,
+                        amount: Number(qs('#entryAmount').value),
+                        date: qs('#entryDate').value,
+                        description: qs('#entryDescription').value.trim()
+                    })
+                });
+                qs('#entryAmount').value = '';
+                qs('#entryDescription').value = '';
+                toast('Catatan keuangan disimpan');
+                await loadFinance();
+            } catch (error) {
+                toast(error.message, 'error');
+            } finally {
+                button.disabled = false;
+            }
+        });
+
+        qs('#entriesBody').addEventListener('click', async event => {
+            const button = event.target.closest('[data-delete-entry]');
+            if (!button || !confirm('Hapus catatan arus kas ini?')) return;
+            try {
+                await api('/finance/entries/' + button.dataset.deleteEntry, { method: 'DELETE' });
+                toast('Catatan dihapus');
+                await loadFinance();
+            } catch (error) {
+                toast(error.message, 'error');
+            }
+        });
+
+        applyPeriod('month');
+    </script>
+</body>
+
+</html>

@@ -12,7 +12,6 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 	"github.com/go-chi/cors"
-	_ "github.com/go-sql-driver/mysql"
 	"github.com/go-kasir/backend/internal/config"
 	"github.com/go-kasir/backend/internal/handler"
 	"github.com/go-kasir/backend/internal/middleware"
@@ -20,6 +19,7 @@ import (
 	jwtutil "github.com/go-kasir/backend/internal/pkg/jwt"
 	"github.com/go-kasir/backend/internal/repository"
 	"github.com/go-kasir/backend/internal/service"
+	_ "github.com/go-sql-driver/mysql"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/driver/mysql"
 	"gorm.io/gorm"
@@ -62,6 +62,7 @@ func main() {
 	setRepo := repository.NewSettingRepo(db)
 	logRepo := repository.NewActivityRepo(db)
 	reportRepo := repository.NewReportRepo(db)
+	financeRepo := repository.NewFinanceRepo(db)
 
 	jwtMgr := jwtutil.NewManager(cfg.JWTSecret, cfg.JWTExpireHours, cfg.JWTRefreshExpireHrs)
 
@@ -73,10 +74,11 @@ func main() {
 	setSvc := service.NewSettingService(setRepo)
 	dashSvc := service.NewDashboardService(trxRepo, reportRepo, prodRepo)
 	reportSvc := service.NewReportService(reportRepo, trxRepo, prodRepo, stockRepo, custRepo)
+	financeSvc := service.NewFinanceService(financeRepo, reportRepo)
 
 	h := &handler.Handlers{
 		Auth: authSvc, Product: prodSvc, Trx: trxSvc, Customer: custSvc,
-		Setting: setSvc, Dash: dashSvc, Report: reportSvc, Cfg: cfg,
+		Setting: setSvc, Dash: dashSvc, Report: reportSvc, Finance: financeSvc, Cfg: cfg,
 		Products: prodRepo, Cats: catRepo, Custs: custRepo, Trxs: trxRepo, Logs: logRepo,
 	}
 
@@ -115,6 +117,10 @@ func main() {
 			priv.Post("/auth/change-password", h.ChangePassword)
 
 			priv.Get("/dashboard", h.Dashboard)
+			priv.Get("/finance/summary", h.FinanceSummary)
+			priv.Get("/finance/entries", h.ListFinanceEntries)
+			priv.Post("/finance/entries", h.CreateFinanceEntry)
+			priv.Delete("/finance/entries/{id}", h.DeleteFinanceEntry)
 
 			priv.Get("/categories", h.ListCategories)
 			priv.Post("/categories", h.CreateCategory)
@@ -210,6 +216,7 @@ func autoMigrate(db *gorm.DB) error {
 		&model.Transaction{},
 		&model.TransactionItem{},
 		&model.Setting{},
+		&model.FinanceEntry{},
 		&model.ActivityLog{},
 	)
 }
